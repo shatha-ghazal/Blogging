@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Blogging Platform — Post</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--muted:#6b7280;}
+  *{box-sizing:border-box;}
+  body{font-family:Inter,system-ui,Arial,sans-serif;margin:0;background:#fafafa;color:#111827;line-height:1.5;}
+  .app{display:grid;grid-template-columns:220px 1fr;min-height:100vh;}
+  .sidebar{background:white;border-right:1px solid #eee;padding:20px;display:flex;flex-direction:column;}
+  .brand{font-family:Merriweather,serif;font-weight:700;font-size:20px;margin-bottom:16px;}
+  .nav-item{padding:10px;border-radius:8px;cursor:pointer;}
+  .nav-item:hover{background:#f8fafc;}
+  .logout{margin-top:8px;padding:10px;border-radius:8px;cursor:pointer;color:#dc2626;}
+  .logout:hover{background:#fee2e2;}
+
+  header{background:white;border-bottom:1px solid #eee;padding:14px 20px;position:sticky;top:0;z-index:50;}
+  .topbar{display:flex;align-items:center;gap:12px;}
+  .search{flex:1;}
+  .search input{width:100%;padding:8px;border-radius:999px;border:1px solid #ddd;}
+  .btn{padding:8px 12px;border-radius:999px;border:1px solid transparent;background:transparent;cursor:pointer;}
+  .btn.primary{background:#111827;color:white;}
+
+  main{padding:28px;max-width:860px;margin:0 auto;}
+  .post-detail{background:white;padding:30px;border-radius:12px;border:1px solid #eee;box-shadow:0 3px 8px rgba(0,0,0,0.05);}
+  .title{font-family:Merriweather,serif;font-size:28px;margin-bottom:6px;color:#111827;}
+  .subtitle{color:var(--muted);margin-bottom:14px;}
+  .meta{color:var(--muted);margin-bottom:20px;}
+  .post-actions{margin-top:20px;display:flex;gap:10px;}
+  img.post-image{max-width:100%;border-radius:8px;margin-bottom:10px;}
+
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:100;}
+  .modal.open{display:flex;}
+  .editor, .modal-content{background:white;padding:20px;border-radius:12px;width:100%;max-width:700px;box-shadow:0 10px 30px rgba(0,0,0,0.2);display:flex;flex-direction:column;gap:10px;}
+  .editor input, .modal-content input{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;}
+  .toolbar button,.toolbar select,.toolbar input[type="color"],.toolbar input[type="file"]{padding:6px 10px;border:1px solid #ccc;border-radius:6px;background:#f9f9f9;cursor:pointer;}
+  .content-area{border:1px solid #ddd;border-radius:8px;min-height:150px;padding:10px;outline:none;}
+
+  /* Profile Modal */
+  #profileModal{position:fixed;inset:0;background:rgba(0,0,0,0.45);display:none;align-items:center;justify-content:center;z-index:100;}
+  #profileModal.open{display:flex;}
+  #profileModal .modal-content{max-width:400px;}
+  #profileModal button{padding:10px;border-radius:6px;border:none;cursor:pointer;}
+  #profileModal .btn-primary{background:#111827;color:white;}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">My Blogging Platform</div>
+    <div class="nav-item" onclick="location.href='index.html'">🏠 Home</div>
+    <div class="nav-item" onclick="showProfile()">👤 Profile</div>
+    <div class="logout" onclick="logout()">🚪 Logout</div>
+  </aside>
+
+  <div>
+    <!-- Header -->
+    <header>
+      <div class="topbar">
+        <div class="brand">My Blogging Platform</div>
+        <div class="search">
+          <input placeholder="Search..." style="width:100%;padding:8px;border-radius:999px;border:1px solid #ddd">
+        </div>
+        <button class="btn primary" id="newStoryBtn">New Story</button>
+      </div>
+    </header>
+
+    <main>
+      <div id="postView">
+        <div class="post-detail" id="postDetail"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Story Modal -->
+<div class="modal" id="modal">
+  <div class="editor">
+    <h3 id="editorTitle">Create New Story</h3>
+    <input id="title" placeholder="Title" />
+    <input id="subtitle" placeholder="Subtitle (optional)" />
+    <div class="toolbar">
+      <button onclick="format('bold')"><b>B</b></button>
+      <button onclick="format('underline')"><u>U</u></button>
+      <select onchange="format('fontName',this.value)">
+        <option value="">Font</option>
+        <option>Arial</option>
+        <option>Georgia</option>
+        <option>'Times New Roman'</option>
+        <option>Verdana</option>
+      </select>
+      <select onchange="format('fontSize',this.value)">
+        <option value="3">Size</option>
+        <option value="2">Small</option>
+        <option value="3">Normal</option>
+        <option value="4">Large</option>
+        <option value="5">X-Large</option>
+      </select>
+      <input type="color" onchange="format('foreColor',this.value)" title="Font Color" />
+      <input type="file" id="imageInput" accept="image/*" />
+    </div>
+    <div id="content" class="content-area" contenteditable="true"></div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px">
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="saveBtn">Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal" id="profileModal">
+  <div class="modal-content">
+    <h3>Profile Settings</h3>
+    <label>Name</label><input id="p_name">
+    <label>Username</label><input id="p_user">
+    <label>Password</label><input id="p_pass" type="password">
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+      <button class="btn" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const POSTS_KEY='mc_posts_v5', USER_KEY='mc_user_v5', LOGGED_KEY='mc_logged_v5';
+let posts=JSON.parse(localStorage.getItem(POSTS_KEY)||'[]');
+let user=JSON.parse(localStorage.getItem(USER_KEY)||'{}');
+const postId=localStorage.getItem('selected_post');
+const postBox=document.getElementById('postDetail');
+let editId=null;
+
+// Show post
+function renderPost(p){
+  postBox.innerHTML=`
+    ${p.image?`<img src="${p.image}" class="post-image">`:''}
+    <h1 class="title">${p.title}</h1>
+    <h3 class="subtitle">${p.subtitle||''}</h3>
+    <div class="meta">${p.author||'Admin'} • ${new Date(p.createdAt).toLocaleDateString()}</div>
+    <div>${p.content}</div>
+    <div class="post-actions">
+      <button class="btn" onclick="openEditor('edit','${p.id}')">✏️ Edit</button>
+      <button class="btn" onclick="deletePost('${p.id}')">🗑️ Delete</button>
+    </div>
+  `;
+}
+if(postId){
+  const p=posts.find(x=>x.id===postId);
+  if(p) renderPost(p);
+  else postBox.innerHTML='<p>Post not found.</p>';
+}else{
+  postBox.innerHTML='<p>No post selected.</p>';
+}
+
+// --- Modal logic ---
+const modal=document.getElementById('modal');
+const titleField=document.getElementById('title');
+const subtitleField=document.getElementById('subtitle');
+const contentDiv=document.getElementById('content');
+const imageInput=document.getElementById('imageInput');
+let imageData=null;
+
+document.getElementById('newStoryBtn').onclick=()=>openEditor('new');
+document.getElementById('cancelBtn').onclick=()=>modal.classList.remove('open');
+imageInput.onchange=e=>{
+  const file=e.target.files[0];
+  if(file){
+    const reader=new FileReader();
+    reader.onload=()=>{imageData=reader.result;};
+    reader.readAsDataURL(file);
+  }
+};
+
+function openEditor(mode,id=null){
+  modal.classList.add('open');
+  contentDiv.focus();
+  if(mode==='edit'){
+    document.getElementById('editorTitle').innerText='Edit Post';
+    const p=posts.find(x=>x.id===id);
+    if(p){
+      editId=id;
+      titleField.value=p.title;
+      subtitleField.value=p.subtitle;
+      contentDiv.innerHTML=p.content;
+      imageData=p.image||null;
+    }
+  }else{
+    editId=null;
+    document.getElementById('editorTitle').innerText='Create New Story';
+    titleField.value=''; subtitleField.value=''; contentDiv.innerHTML=''; imageData=null;
+  }
+}
+
+document.getElementById('saveBtn').onclick=()=>{
+  const title=titleField.value.trim();
+  const subtitle=subtitleField.value.trim();
+  const content=contentDiv.innerHTML.trim();
+  if(!title){alert('Title is required');return;}
+  if(editId){
+    const idx=posts.findIndex(p=>p.id===editId);
+    posts[idx]={...posts[idx],title,subtitle,content,image:imageData};
+  }else{
+    const newPost={id:'p'+Date.now(),title,subtitle,content,image:imageData,author:user.name||'Admin',createdAt:Date.now()};
+    posts.push(newPost);
+  }
+  localStorage.setItem(POSTS_KEY,JSON.stringify(posts));
+  modal.classList.remove('open');
+  alert(editId?'Post updated!':'Post created!');
+  location.reload();
+};
+
+function deletePost(id){
+  if(confirm('Delete this post?')){
+    posts=posts.filter(p=>p.id!==id);
+    localStorage.setItem(POSTS_KEY,JSON.stringify(posts));
+    alert('Post deleted');
+    location.href='index.html';
+  }
+}
+
+// Formatting
+function format(cmd,val=null){document.execCommand(cmd,false,val);}
+
+// Profile Modal
+function showProfile(){
+  document.getElementById('profileModal').classList.add('open');
+  p_name.value=user.name||'';
+  p_user.value=user.username||'';
+  p_pass.value=user.password||'';
+}
+function closeProfileModal(){
+  document.getElementById('profileModal').classList.remove('open');
+}
+function saveProfile(){
+  user.name=p_name.value;
+  user.username=p_user.value;
+  user.password=p_pass.value;
+  localStorage.setItem(USER_KEY,JSON.stringify(user));
+  alert('Profile updated!');
+  closeProfileModal();
+}
+
+// Logout
+function logout(){
+  localStorage.removeItem(LOGGED_KEY);
+  location.href='index.html';
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>My Blogging Platform</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Merriweather:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root { --muted:#6b7280; }
+  * { box-sizing:border-box; }
+  body {
+    font-family:Inter,system-ui,Arial,sans-serif;
+    margin:0;
+    background:#fafafa;
+    color:#111827;
+  }
+
+  /* Layout */
+  .app { display:grid; grid-template-columns:240px 1fr; min-height:100vh; }
+
+  /* Sidebar */
+  .sidebar { background:white; border-right:1px solid #eee; padding:20px; display:flex; flex-direction:column; }
+  .brand { font-family:Merriweather,serif; font-weight:700; font-size:20px; margin-bottom:16px; }
+  .nav { display:flex; flex-direction:column; gap:10px; }
+  .nav-item { padding:10px; border-radius:8px; cursor:pointer; }
+  .nav-item:hover { background:#f8fafc; }
+  .logout { margin-top:6px; padding:10px; border-radius:8px; cursor:pointer; color:#dc2626; }
+  .logout:hover { background:#fee2e2; }
+
+  /* Header */
+  header { background:white; border-bottom:1px solid #eee; padding:14px 20px; position:sticky; top:0; z-index:50; }
+  .topbar { display:flex; align-items:center; gap:12px; }
+  .search { flex:1; }
+  .search input { width:100%; padding:8px 12px; border-radius:999px; border:1px solid #ddd; }
+  .btn { padding:8px 12px; border-radius:999px; border:1px solid transparent; background:transparent; cursor:pointer; }
+  .btn.primary { background:#111827; color:white; }
+
+  /* Posts */
+  main { padding:28px; max-width:900px; margin:0 auto; }
+  .post { background:white; padding:20px; border-radius:12px; margin-bottom:16px; border:1px solid #eee; box-shadow:0 2px 6px rgba(0,0,0,0.05); }
+  .post h2 { color:#000; cursor:pointer; }
+  .post .subtitle { color:var(--muted); }
+  .meta { color:var(--muted); margin-top:8px; font-size:14px; }
+
+  /* Modal */
+  .modal { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:none; align-items:center; justify-content:center; z-index:100; }
+  .modal.open { display:flex; }
+  .editor, .modal-content { background:white; padding:20px; border-radius:12px; width:100%; max-width:700px; box-shadow:0 10px 30px rgba(0,0,0,0.2); display:flex; flex-direction:column; gap:10px; }
+  .editor input, .modal-content input { width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; }
+  .toolbar { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+  .toolbar button, .toolbar select, .toolbar input[type="color"], .toolbar input[type="file"] { padding:6px 10px; border:1px solid #ccc; border-radius:6px; background:#f9f9f9; cursor:pointer; }
+  .content-area { border:1px solid #ddd; border-radius:8px; min-height:150px; padding:10px; outline:none; }
+
+  /* Login Page */
+  #loginPage { display:flex; align-items:center; justify-content:center; height:100vh; background:#f3f4f6; }
+  .login-box { background:white; padding:30px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.1); width:300px; }
+  .login-box input { width:100%; padding:10px; margin-bottom:10px; border:1px solid #ddd; border-radius:6px; }
+  .login-box button { width:100%; padding:10px; background:#111827; color:white; border:none; border-radius:6px; cursor:pointer; }
+
+  /* Profile Modal */
+  #profileModal { position: fixed; inset:0; background: rgba(0,0,0,0.45); display: none; align-items:center; justify-content:center; z-index:100; }
+  #profileModal.open { display:flex; }
+  #profileModal .modal-content { max-width:400px; }
+  #profileModal button { padding:10px; border-radius:6px; border:none; cursor:pointer; }
+  #profileModal .btn-primary { background:#111827; color:white; }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="loginPage">
+  <div class="login-box">
+    <h3>Login</h3>
+    <input id="username" placeholder="Username" />
+    <input id="password" placeholder="Password" type="password" />
+    <button onclick="login()">Login</button>
+  </div>
+</div>
+
+<!-- App -->
+<div class="app" id="app" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand">My Blogging Platform</div>
+    <div class="nav">
+      <div class="nav-item" onclick="goToBlogging1()">🏠 Home</div>
+      <div class="nav-item" onclick="showProfile()">👤 Profile</div>
+      <div class="logout" onclick="logout()">🚪 Logout</div>
+    </div>
+  </aside>
+
+  <div>
+    <header>
+      <div class="topbar">
+        <div class="brand">My Blogging Platform</div>
+        <div class="search">
+          <input placeholder="Search..." id="searchInput">
+        </div>
+        <button class="btn primary" id="newStoryBtn">New Story</button>
+      </div>
+    </header>
+
+    <main id="main"></main>
+  </div>
+</div>
+
+<!-- Story Modal -->
+<div class="modal" id="modal">
+  <div class="editor">
+    <h3 id="editorTitle">Create New Story</h3>
+    <input id="title" placeholder="Title" />
+    <input id="subtitle" placeholder="Subtitle (optional)" />
+    <div class="toolbar">
+      <button onclick="format('bold')"><b>B</b></button>
+      <button onclick="format('underline')"><u>U</u></button>
+      <select id="fontSize" onchange="format('fontSize',this.value)">
+        <option value="3">Size</option>
+        <option value="2">Small</option>
+        <option value="3">Normal</option>
+        <option value="4">Large</option>
+        <option value="5">X-Large</option>
+      </select>
+      <select id="fontFamily" onchange="format('fontName',this.value)">
+        <option value="Arial">Font</option>
+        <option value="Arial">Arial</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Times New Roman">Times</option>
+        <option value="Courier New">Courier</option>
+      </select>
+      <input type="color" id="fontColor" onchange="format('foreColor',this.value)" title="Font Color" />
+      <input type="file" id="imageInput" accept="image/*" />
+    </div>
+    <div id="content" class="content-area" contenteditable="true"></div>
+    <div style="text-align:right;margin-top:10px;">
+      <button class="btn" id="cancelBtn">Cancel</button>
+      <button class="btn primary" id="saveBtn">Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal" id="profileModal">
+  <div class="modal-content">
+    <h3>Profile Settings</h3>
+    <label>Name</label><input id="p_name">
+    <label>Username</label><input id="p_user">
+    <label>Password</label><input id="p_pass" type="password">
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+      <button class="btn" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveProfile()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const POSTS_KEY='mc_posts_v5', USER_KEY='mc_user_v5', LOGGED_KEY='mc_logged_v5';
+let posts=JSON.parse(localStorage.getItem(POSTS_KEY)||'[]');
+let user=JSON.parse(localStorage.getItem(USER_KEY)||'{}');
+let logged=!!localStorage.getItem(LOGGED_KEY);
+let imageData=null;
+
+// Sample posts
+if(!posts.length){
+  posts=[
+    {id:'p1',title:'My First Blog Post',subtitle:'Getting started with writing',author:'John Doe',content:'<p>This is your first post!</p>',createdAt:Date.now()},
+    {id:'p2',title:'Life Lessons',subtitle:'Thoughts and reflections',author:'Jane Smith',content:'<p>Some reflections on life...</p>',createdAt:Date.now()}
+  ];
+  localStorage.setItem(POSTS_KEY,JSON.stringify(posts));
+}
+
+function login(){
+  const u=document.getElementById('username').value.trim();
+  const p=document.getElementById('password').value.trim();
+  if(!u||!p){alert('Enter username and password');return;}
+  user={name:u,username:u,password:p};
+  localStorage.setItem(USER_KEY,JSON.stringify(user));
+  localStorage.setItem(LOGGED_KEY,'1');
+  logged=true;
+  initApp();
+}
+
+function logout(){
+  localStorage.removeItem(LOGGED_KEY);
+  document.getElementById('app').style.display='none';
+  document.getElementById('loginPage').style.display='flex';
+}
+
+function initApp(){
+  document.getElementById('loginPage').style.display='none';
+  document.getElementById('app').style.display='grid';
+  renderPosts();
+}
+if(logged)initApp();
+
+function goToBlogging1(){
+  window.location.href='index.html';
+}
+
+function renderPosts(){
+  const main=document.getElementById('main');
+  main.innerHTML=posts.map(p=>`
+    <div class="post">
+      <h2 onclick="openPost('${p.id}')">${p.title}</h2>
+      <div class="subtitle">${p.subtitle||''}</div>
+      <div class="meta">By ${p.author} • ${new Date(p.createdAt).toLocaleDateString()}</div>
+    </div>
+  `).join('');
+}
+function openPost(id){
+  localStorage.setItem('selected_post',id);
+  window.open('post.html','_blank');
+}
+
+// --- Modal logic ---
+const modal=document.getElementById('modal');
+document.getElementById('newStoryBtn').onclick=()=>openEditor();
+document.getElementById('cancelBtn').onclick=()=>modal.classList.remove('open');
+document.getElementById('imageInput').onchange=e=>{
+  const file=e.target.files[0];
+  if(file){
+    const reader=new FileReader();
+    reader.onload=()=>{imageData=reader.result;document.execCommand('insertImage',false,imageData);};
+    reader.readAsDataURL(file);
+  }
+};
+
+function openEditor(){
+  modal.classList.add('open');
+  document.getElementById('title').value='';
+  document.getElementById('subtitle').value='';
+  document.getElementById('content').innerHTML='';
+}
+document.getElementById('saveBtn').onclick=()=>{
+  const title=document.getElementById('title').value.trim();
+  const subtitle=document.getElementById('subtitle').value.trim();
+  const content=document.getElementById('content').innerHTML.trim();
+  if(!title){alert('Title required');return;}
+  const newPost={id:'p'+Date.now(),title,subtitle,content,author:user.name||'You',createdAt:Date.now()};
+  posts.push(newPost);
+  localStorage.setItem(POSTS_KEY,JSON.stringify(posts));
+  modal.classList.remove('open');
+  renderPosts();
+};
+
+// Formatting
+function format(cmd,val=null){document.execCommand(cmd,false,val);}
+
+// Profile Modal
+function showProfile(){
+  document.getElementById('profileModal').classList.add('open');
+  p_name.value=user.name||'';
+  p_user.value=user.username||'';
+  p_pass.value=user.password||'';
+}
+function closeProfileModal(){
+  document.getElementById('profileModal').classList.remove('open');
+}
+function saveProfile(){
+  user.name=p_name.value;
+  user.username=p_user.value;
+  user.password=p_pass.value;
+  localStorage.setItem(USER_KEY,JSON.stringify(user));
+  alert('Profile updated!');
+  closeProfileModal();
+}
+</script>
+</body>
+</html>
